@@ -35,7 +35,16 @@ func StartFn(cfg *config.Config) error {
 	// TODO: configurable logging levels
 	log := logrus.NewEntry(logrus.StandardLogger())
 
-	h := handler.New(log, cfg)
+	p := handler.HandlerParams{
+		Config: cfg,
+		L:      log,
+		Client: handler.NewFlintClient,
+	}
+
+	h, err := handler.New(p)
+	if err != nil {
+		return err
+	}
 	http.HandleFunc("/webhook", h.HandleWebhookPost)
 
 	log.Infof("starting service on %s", cfg.Host)
