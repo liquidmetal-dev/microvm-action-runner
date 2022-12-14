@@ -36,17 +36,12 @@ func (s Service) Parse(r *http.Request) (*github.WorkflowJobPayload, error) {
 		return nil, err
 	}
 
-	switch payload.(type) {
-	case github.WorkflowJobPayload:
-		p, ok := payload.(github.WorkflowJobPayload)
-		if !ok {
-			return nil, errors.New("could not parse WorkflowJobPayload")
-		}
-
-		return &p, nil
-	default:
-		return nil, nil
+	p, ok := payload.(github.WorkflowJobPayload)
+	if !ok {
+		return nil, errors.New("could not parse WorkflowJobPayload")
 	}
+
+	return &p, nil
 }
 
 func noOpt() github.Option {

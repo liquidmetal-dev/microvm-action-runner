@@ -49,8 +49,7 @@ func StartFn(cfg *config.Config) error {
 	}
 	http.HandleFunc("/webhook", h.HandleWebhookPost)
 
-	log.Infof("starting service on %s", cfg.Host)
-
 	// TODO configurable port
+	log.Infof("starting service on localhost:3000")
 	return http.ListenAndServe(":3000", nil)
 }
