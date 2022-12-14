@@ -9,6 +9,7 @@ import (
 	"github.com/weaveworks-liquidmetal/microvm-action-runner/pkg/config"
 	"github.com/weaveworks-liquidmetal/microvm-action-runner/pkg/flags"
 	"github.com/weaveworks-liquidmetal/microvm-action-runner/pkg/handler"
+	"github.com/weaveworks-liquidmetal/microvm-action-runner/pkg/payload"
 )
 
 func startCommand() *cli.Command {
@@ -35,10 +36,11 @@ func StartFn(cfg *config.Config) error {
 	// TODO: configurable logging levels
 	log := logrus.NewEntry(logrus.StandardLogger())
 
-	p := handler.HandlerParams{
-		Config: cfg,
-		L:      log,
-		Client: handler.NewFlintClient,
+	p := handler.Params{
+		Config:  cfg,
+		L:       log,
+		Payload: payload.New(cfg.WebhookSecret),
+		Client:  handler.NewFlintClient,
 	}
 
 	h, err := handler.New(p)
