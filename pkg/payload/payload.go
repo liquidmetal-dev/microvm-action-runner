@@ -8,15 +8,15 @@ import (
 )
 
 type Payload interface {
-	Parse() (github.WorkflowJobPayload, error)
+	Parse(r *http.Request) (*github.WorkflowJobPayload, error)
 }
 
 type Service struct {
 	secret string
 }
 
-func New(s string) Service {
-	return Service{s}
+func New(s string) *Service {
+	return &Service{s}
 }
 
 func (s Service) Parse(r *http.Request) (*github.WorkflowJobPayload, error) {
