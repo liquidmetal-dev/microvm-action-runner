@@ -10,6 +10,10 @@ build: ## Build the binary
 
 ##@ Development
 
+.PHONY: test
+test: ## Run the tests
+	go test ./...
+
 .PHONY: generate
 generate: counterfeiter ## Generate test fakes
 	go generate ./...
