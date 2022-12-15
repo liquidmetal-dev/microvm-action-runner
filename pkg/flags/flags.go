@@ -22,20 +22,20 @@ func CLIFlags(options ...WithFlagsFunc) []cli.Flag {
 }
 
 const (
-	hostFlag   = "address"
+	hostsFlag  = "hosts"
 	tokenFlag  = "token"
 	secretFlag = "secret"
 	keyFlag    = "key"
 )
 
 // WithHostFlag adds the flintlock GRPC address flag to the command.
-func WithHostFlag() WithFlagsFunc {
+func WithHostsFlag() WithFlagsFunc {
 	return func() []cli.Flag {
 		return []cli.Flag{
-			&cli.StringFlag{
-				Name:     hostFlag,
-				Aliases:  []string{"a"},
-				Usage:    "flintlock server address + port",
+			&cli.StringSliceFlag{
+				Name:     hostsFlag,
+				Aliases:  []string{"host"},
+				Usage:    "a list of flintlock server addresses (eg. 1.2.3.4:9090)",
 				Required: true,
 			},
 		}
@@ -88,7 +88,7 @@ func WithSSHPublicKeyFlag() WithFlagsFunc {
 // which will be used in the command's action.
 func ParseFlags(cfg *config.Config) cli.BeforeFunc {
 	return func(ctx *cli.Context) error {
-		cfg.Host = ctx.String(hostFlag)
+		cfg.Hosts = ctx.StringSlice(hostsFlag)
 		cfg.APIToken = ctx.String(tokenFlag)
 		cfg.WebhookSecret = ctx.String(secretFlag)
 		cfg.SSHPublicKey = ctx.String(keyFlag)

@@ -10,6 +10,7 @@ import (
 	"github.com/warehouse-13/hammertime/pkg/client"
 
 	"github.com/weaveworks-liquidmetal/microvm-action-runner/pkg/config"
+	"github.com/weaveworks-liquidmetal/microvm-action-runner/pkg/host"
 	"github.com/weaveworks-liquidmetal/microvm-action-runner/pkg/microvm"
 	"github.com/weaveworks-liquidmetal/microvm-action-runner/pkg/payload"
 )
@@ -37,7 +38,9 @@ type Params struct {
 	*config.Config
 	Client  ClientFunc
 	Payload payload.Payload
-	L       *logrus.Entry
+	// TODO interface instead?
+	HostManager *host.Manager
+	L           *logrus.Entry
 }
 
 // New returns a new handler
@@ -52,6 +55,10 @@ func New(p Params) (handler, error) {
 
 	if p.Payload == nil {
 		return handler{}, errors.New("payload interface not fulfilled")
+	}
+
+	if p.HostManager == nil {
+		return handler{}, errors.New("host manager not provided")
 	}
 
 	return handler{
@@ -102,7 +109,15 @@ func (h handler) HandleWebhookPost(w http.ResponseWriter, r *http.Request) {
 func (h handler) processQueuedAction(p github.WorkflowJobPayload) error {
 	h.L.Infof("proccessing queued action for workflow (job-id: %d) (step-id: %d)", p.WorkflowJob.RunID, p.WorkflowJob.ID)
 
-	fl, err := h.Client(h.Host)
+	name := generateName(p)
+
+	host, err := h.HostManager.Assign(name)
+	if err != nil {
+		h.L.Errorf("failed to assign host to runner: %s", err)
+		return err
+	}
+
+	fl, err := h.Client(host)
 	if err != nil {
 		h.L.Errorf("failed to create flintlock client: %s", err)
 		return err
@@ -110,11 +125,10 @@ func (h handler) processQueuedAction(p github.WorkflowJobPayload) error {
 
 	defer func() {
 		if err := fl.Close(); err != nil {
-			h.L.Errorf("failed to close connection to flintlock host to %s: %s", h.Host, err)
+			h.L.Errorf("failed to close connection to flintlock host to %s: %s", host, err)
 		}
 	}()
 
-	name := generateName(p)
 	mvm, err := microvm.New(h.APIToken, h.SSHPublicKey, name)
 	if err != nil {
 		h.L.Errorf("failed to generate microvm spec: %s", err)
@@ -136,7 +150,15 @@ func (h handler) processQueuedAction(p github.WorkflowJobPayload) error {
 func (h handler) processCompletedAction(p github.WorkflowJobPayload) error {
 	h.L.Infof("proccessing complete action for workflow (job-id: %d) (step-id: %d)", p.WorkflowJob.RunID, p.WorkflowJob.ID)
 
-	fl, err := h.Client(h.Host)
+	name := generateName(p)
+
+	host, err := h.HostManager.Lookup(name)
+	if err != nil {
+		h.L.Errorf("failed to look up host for runner: %s", err)
+		return err
+	}
+
+	fl, err := h.Client(host)
 	if err != nil {
 		h.L.Errorf("failed to create flintlock client %s", err)
 		return err
@@ -147,8 +169,6 @@ func (h handler) processCompletedAction(p github.WorkflowJobPayload) error {
 			h.L.Errorf("failed to close connection to flintlock host %s: %s", "address", err)
 		}
 	}()
-
-	name := generateName(p)
 
 	h.L.Debugf("looking up microvm for action %s/%s", microvm.Namespace, name)
 	resp, err := fl.List(name, microvm.Namespace)
@@ -172,6 +192,8 @@ func (h handler) processCompletedAction(p github.WorkflowJobPayload) error {
 	}
 
 	h.L.Infof("deleted microvm, name: %s, uid: %s", name, *uid)
+
+	h.HostManager.Unassign(name)
 
 	return nil
 }

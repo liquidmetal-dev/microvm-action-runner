@@ -2,8 +2,8 @@ package config
 
 // Config stores the parsed flag opt values for use by the commands
 type Config struct {
-	// Host is the address + port of a flintlock server
-	Host string
+	// Hosts is a slice of addresses + ports of any number of flintlock servers
+	Hosts []string
 	// APIToken is the Github PAT with repo scope
 	APIToken string
 	// SSHPublicKey is the pub key to add to MicroVMs

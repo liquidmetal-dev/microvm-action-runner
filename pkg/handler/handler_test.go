@@ -20,6 +20,7 @@ import (
 	"github.com/weaveworks-liquidmetal/microvm-action-runner/pkg/config"
 	"github.com/weaveworks-liquidmetal/microvm-action-runner/pkg/handler"
 	"github.com/weaveworks-liquidmetal/microvm-action-runner/pkg/handler/fakes"
+	"github.com/weaveworks-liquidmetal/microvm-action-runner/pkg/host"
 	"github.com/weaveworks-liquidmetal/microvm-action-runner/pkg/microvm"
 )
 
@@ -54,6 +55,19 @@ func TestNew_WithoutPayloadShouldError(t *testing.T) {
 	}
 	_, err := handler.New(p)
 	g.Expect(err).To(MatchError("payload interface not fulfilled"))
+}
+
+func TestNew_WithoutHostManagerShouldError(t *testing.T) {
+	g := NewWithT(t)
+	cfg := newTestConfig()
+	p := handler.Params{
+		Config:  cfg,
+		Client:  func(string) (client.FlintlockClient, error) { return &fakes.FakeFlintlockClient{}, nil },
+		L:       nullLogger(),
+		Payload: &fakes.FakePayload{},
+	}
+	_, err := handler.New(p)
+	g.Expect(err).To(MatchError("host manager not provided"))
 }
 
 func TestHandleWebhookPost(t *testing.T) {
@@ -153,10 +167,11 @@ func TestHandleWebhookPost(t *testing.T) {
 			)
 
 			p := handler.Params{
-				Config:  cfg,
-				Client:  flClientFn,
-				Payload: payloadService,
-				L:       nullLogger(),
+				Config:      cfg,
+				Client:      flClientFn,
+				Payload:     payloadService,
+				HostManager: host.New(cfg.Hosts),
+				L:           nullLogger(),
 			}
 			h, err := handler.New(p)
 			g.Expect(err).NotTo(HaveOccurred())
@@ -238,18 +253,6 @@ func TestHandleWebhookPost_Queued(t *testing.T) {
 			},
 			expectedStatus: http.StatusInternalServerError,
 		},
-		// {
-		// 	name:  "client func fails, processing completed event fails",
-		// 	fakesReturn: func(event string, payloadService *fakes.FakePayload, _ *fakes.FakeFlintlockClient) {
-		// 		payloadService.ParseReturns(fakeEvent(event, nodeId, runId), nil)
-		// 	},
-		// 	expected: func(payloadService *fakes.FakePayload, flClient *fakes.FakeFlintlockClient) {
-		// 		g.Expect(payloadService.ParseCallCount()).To(Equal(1))
-		// 		g.Expect(flClient.ListCallCount()).To(Equal(0))
-		// 		g.Expect(flClient.DeleteCallCount()).To(Equal(0))
-		// 	},
-		// 	expectedStatus: http.StatusInternalServerError,
-		// },
 	}
 
 	for _, tc := range tt {
@@ -261,10 +264,11 @@ func TestHandleWebhookPost_Queued(t *testing.T) {
 			)
 
 			p := handler.Params{
-				Config:  cfg,
-				Client:  flClientFn,
-				Payload: payloadService,
-				L:       nullLogger(),
+				Config:      cfg,
+				Client:      flClientFn,
+				Payload:     payloadService,
+				HostManager: host.New(cfg.Hosts),
+				L:           nullLogger(),
 			}
 			h, err := handler.New(p)
 			g.Expect(err).NotTo(HaveOccurred())
@@ -370,11 +374,16 @@ func TestHandleWebhookPost_Completed(t *testing.T) {
 				flClientFn     = newFakeClient(&flClient)
 			)
 
+			manager := host.New(cfg.Hosts)
+			manager.HostCount[expectedName(nodeId, runId)]++
+			manager.AssignedMap[expectedName(nodeId, runId)] = cfg.Hosts[0]
+
 			p := handler.Params{
-				Config:  cfg,
-				Client:  flClientFn,
-				Payload: payloadService,
-				L:       nullLogger(),
+				Config:      cfg,
+				Client:      flClientFn,
+				Payload:     payloadService,
+				HostManager: manager,
+				L:           nullLogger(),
 			}
 			h, err := handler.New(p)
 			g.Expect(err).NotTo(HaveOccurred())
@@ -430,7 +439,7 @@ func fakeMicrovmList(uid string) *v1alpha1.ListMicroVMsResponse {
 
 func newTestConfig() *config.Config {
 	return &config.Config{
-		Host:          "host",
+		Hosts:         []string{"host"},
 		APIToken:      "token",
 		SSHPublicKey:  "key",
 		WebhookSecret: "secret",
