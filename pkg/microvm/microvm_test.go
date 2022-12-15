@@ -17,7 +17,6 @@ func Test_MicrovmNew(t *testing.T) {
 	var (
 		name  = "foo"
 		token = "token"
-		// key   = "key"
 	)
 
 	spec, err := microvm.New(token, "", name)
