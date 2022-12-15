@@ -17,10 +17,14 @@ Start the service:
 
 ```bash
 ./microvm-action-runner start \
-	--address <flintlock address and port> \
+	--host <flintlock address and port> \
 	--token <pat token>
 
 # run --help for more flag options
+
+# more flintlock hosts can be added with additional `host` flags
+# eg, --host foo:9090 --host bar:9090
+#     or --hosts foo:9090,bar:9090
 ```
 
 ### Setup
@@ -56,7 +60,22 @@ Start the service:
 Your service should now be ready to receive webhook requests from workflow jobs
 in that repo/org/ent.
 
-### Local testing
+### Contributing / Local Development
+
+1. Fork the repo.
+
+1. Clone your fork.
+
+1. Run `make test`.
+
+1. Make your changes, ensuring there are new tests and everything passes.
+
+1. Manually test using `ngrok` (below). (Integration/acceptance tests are coming, for now
+we must manually verify).
+
+1. Open a PR.
+
+#### Local testing
 
 To check out the service without going to the effort of exposing the service
 properly, you can use [`ngrok`][ngrok]. You can get a free plan as an individual.
