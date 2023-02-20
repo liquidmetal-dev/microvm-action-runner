@@ -129,7 +129,7 @@ func (h handler) processQueuedAction(p github.WorkflowJobPayload) error {
 		}
 	}()
 
-	mvm, err := microvm.New(h.APIToken, h.SSHPublicKey, name)
+	mvm, err := microvm.New(h.APIToken, h.SSHPublicKey, h.Username, h.Repository, name)
 	if err != nil {
 		h.L.Errorf("failed to generate microvm spec: %s", err)
 		return err

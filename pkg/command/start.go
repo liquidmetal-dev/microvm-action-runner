@@ -22,6 +22,7 @@ func startCommand() *cli.Command {
 		Aliases: []string{"s"},
 		Before:  flags.ParseFlags(cfg),
 		Flags: flags.CLIFlags(
+			flags.WithRepoFlags(),
 			flags.WithHostsFlag(),
 			flags.WithAPITokenFlag(),
 			flags.WithWebhookSecretFlag(),

@@ -18,17 +18,17 @@ const (
 	userdataScript = "userdata.sh"
 )
 
-func New(ghToken, publicKey, name string) (*types.MicroVMSpec, error) {
+func New(ghToken, publicKey, user, repo, id string) (*types.MicroVMSpec, error) {
 	mvm := defaults.BaseMicroVM()
-	mvm.Id = name
+	mvm.Id = id
 	mvm.Namespace = Namespace
 
-	metadata, err := createMetadata(name, Namespace)
+	metadata, err := createMetadata(id, Namespace)
 	if err != nil {
 		return nil, err
 	}
 
-	userdata, err := createUserData(name, ghToken, publicKey)
+	userdata, err := createUserData(id, user, repo, ghToken, publicKey)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func createMetadata(name, ns string) (string, error) {
 //go:embed userdata.sh
 var embeddedScript embed.FS
 
-func createUserData(name, ghToken, publicKey string) (string, error) {
+func createUserData(id, ghToken, user, repo, publicKey string) (string, error) {
 	dat, err := embeddedScript.ReadFile(userdataScript)
 	if err != nil {
 		return "", err
@@ -68,10 +68,12 @@ func createUserData(name, ghToken, publicKey string) (string, error) {
 	script := string(dat)
 
 	script = strings.Replace(script, "REPLACE_PAT", ghToken, 1)
-	script = strings.Replace(script, "REPLACE_NAME", name, 1)
+	script = strings.Replace(script, "REPLACE_ID", id, 1)
+	script = strings.Replace(script, "REPLACE_ORG_USER", user, 1)
+	script = strings.Replace(script, "REPLACE_REPO", repo, 1)
 
 	userData := &userdata.UserData{
-		HostName: name,
+		HostName: id,
 		Users: []userdata.User{{
 			Name: "root",
 		}},
