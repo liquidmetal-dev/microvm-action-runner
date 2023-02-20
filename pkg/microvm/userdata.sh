@@ -5,10 +5,10 @@ SCRIPT="/home/$USER/register.sh"
 WORK_DIR="/home/$USER/actions-runner"
 RUNNER_VERSION=2.294.0
 TAR_NAME="actions-runner-linux-x64-$RUNNER_VERSION.tar.gz"
-ORG=weaveworks
-REPO=rnd-garage
+ORG="REPLACE_ORG_USER"
+REPO="REPLACE_REPO"
 REPO_URL="https://github.com/$ORG/$REPO"
-RUNNER_NAME="REPLACE_NAME"
+RUNNER_NAME="REPLACE_ID"
 
 get_token() {
 	curl \

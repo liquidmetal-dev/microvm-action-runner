@@ -15,21 +15,25 @@ func Test_MicrovmNew(t *testing.T) {
 	g := NewWithT(t)
 
 	var (
-		name  = "foo"
-		token = "token"
+		id       = "foo"
+		repoName = "action-runner"
+		userName = "liquid-metal"
+		token    = "token"
 	)
 
-	spec, err := microvm.New(token, "", name)
+	spec, err := microvm.New(token, "", userName, repoName, id)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	g.Expect(spec.Namespace).To(Equal(microvm.Namespace))
-	g.Expect(spec.Id).To(Equal(name))
+	g.Expect(spec.Id).To(Equal(id))
 
 	userData := decodeData(g, spec)
 
 	g.Expect(userData.Users[0].Name).To(Equal("root"))
 	g.Expect(userData.Users[0].SSHAuthorizedKeys).To(BeNil())
 	g.Expect(userData.RunCommands[0]).To(ContainSubstring(token))
+	g.Expect(userData.RunCommands[0]).To(ContainSubstring(userName))
+	g.Expect(userData.RunCommands[0]).To(ContainSubstring(repoName))
 }
 
 func Test_MicrovmNew_WithSSHKey(t *testing.T) {
@@ -41,7 +45,7 @@ func Test_MicrovmNew_WithSSHKey(t *testing.T) {
 		key   = "key"
 	)
 
-	spec, err := microvm.New(token, key, name)
+	spec, err := microvm.New(token, key, "", "", name)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	g.Expect(spec.Namespace).To(Equal(microvm.Namespace))

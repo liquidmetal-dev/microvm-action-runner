@@ -22,11 +22,33 @@ func CLIFlags(options ...WithFlagsFunc) []cli.Flag {
 }
 
 const (
+	userFlag   = "user"
+	repoFlag   = "repo"
 	hostsFlag  = "hosts"
 	tokenFlag  = "token"
 	secretFlag = "secret"
 	keyFlag    = "key"
 )
+
+// WithRepoFlags adds the github user and repo flags to the command.
+func WithRepoFlags() WithFlagsFunc {
+	return func() []cli.Flag {
+		return []cli.Flag{
+			&cli.StringFlag{
+				Name:     userFlag,
+				Aliases:  []string{"u"},
+				Usage:    "the github username or org for the repo",
+				Required: true,
+			},
+			&cli.StringFlag{
+				Name:     repoFlag,
+				Aliases:  []string{"r"},
+				Usage:    "the github repo name",
+				Required: true,
+			},
+		}
+	}
+}
 
 // WithHostFlag adds the flintlock GRPC address flag to the command.
 func WithHostsFlag() WithFlagsFunc {
@@ -88,6 +110,8 @@ func WithSSHPublicKeyFlag() WithFlagsFunc {
 // which will be used in the command's action.
 func ParseFlags(cfg *config.Config) cli.BeforeFunc {
 	return func(ctx *cli.Context) error {
+		cfg.Repository = ctx.String(repoFlag)
+		cfg.Username = ctx.String(userFlag)
 		cfg.Hosts = ctx.StringSlice(hostsFlag)
 		cfg.APIToken = ctx.String(tokenFlag)
 		cfg.WebhookSecret = ctx.String(secretFlag)
