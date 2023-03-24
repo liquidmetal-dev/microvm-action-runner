@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/warehouse-13/hammertime/pkg/defaults"
 	"github.com/weaveworks-liquidmetal/flintlock/api/types"
 	"github.com/weaveworks-liquidmetal/flintlock/client/cloudinit/instance"
 	"github.com/weaveworks-liquidmetal/flintlock/client/cloudinit/userdata"
@@ -19,7 +18,7 @@ const (
 )
 
 func New(ghToken, publicKey, user, repo, id string) (*types.MicroVMSpec, error) {
-	mvm := defaults.BaseMicroVM()
+	mvm := defaultMicroVM()
 	mvm.Id = id
 	mvm.Namespace = Namespace
 
