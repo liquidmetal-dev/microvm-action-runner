@@ -1,5 +1,9 @@
 package config
 
+const (
+	DefaultLabel = "mvm"
+)
+
 // Config stores the parsed flag opt values for use by the commands
 type Config struct {
 	// Username is the user or org which owns the repo
@@ -14,4 +18,6 @@ type Config struct {
 	SSHPublicKey string
 	// WebhookSecret is a plaintext string for extra auth to the github runner webhook
 	WebhookSecret string
+	// Labels is a slice of strings for any number of runner labels
+	Labels []string
 }

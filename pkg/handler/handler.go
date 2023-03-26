@@ -88,6 +88,12 @@ func (h handler) HandleWebhookPost(w http.ResponseWriter, r *http.Request) {
 
 	h.L.Debugf("workflow event found %s", event.WorkflowJob.RunURL)
 
+	if !h.shouldRun(event.WorkflowJob.Labels) {
+		h.L.Debug("required labels not set, ignoring event")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	switch event.Action {
 	case eventQueued:
 		if err := h.processQueuedAction(*event); err != nil {
@@ -129,7 +135,16 @@ func (h handler) processQueuedAction(p github.WorkflowJobPayload) error {
 		}
 	}()
 
-	mvm, err := microvm.New(h.APIToken, h.SSHPublicKey, h.Username, h.Repository, name)
+	mvm, err := microvm.New(
+		microvm.UserdataCfg{
+			GithubToken: h.APIToken,
+			PublicKey:   h.SSHPublicKey,
+			User:        h.Username,
+			Repo:        h.Repository,
+			Id:          name,
+			Labels:      h.Labels,
+		},
+	)
 	if err != nil {
 		h.L.Errorf("failed to generate microvm spec: %s", err)
 		return err
@@ -196,6 +211,21 @@ func (h handler) processCompletedAction(p github.WorkflowJobPayload) error {
 	h.HostManager.Unassign(name)
 
 	return nil
+}
+
+func (h handler) shouldRun(jobLabels []string) bool {
+	seen := map[string]struct{}{}
+	for _, l := range jobLabels {
+		seen[l] = struct{}{}
+	}
+
+	for _, l := range h.Labels {
+		if _, ok := seen[l]; ok {
+			return true
+		}
+	}
+
+	return false
 }
 
 func generateName(p github.WorkflowJobPayload) string {

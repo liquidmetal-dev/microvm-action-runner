@@ -3,12 +3,11 @@
 USER=ubuntu
 SCRIPT="/home/$USER/register.sh"
 WORK_DIR="/home/$USER/actions-runner"
-RUNNER_VERSION=2.294.0
-TAR_NAME="actions-runner-linux-x64-$RUNNER_VERSION.tar.gz"
 ORG="REPLACE_ORG_USER"
 REPO="REPLACE_REPO"
 REPO_URL="https://github.com/$ORG/$REPO"
 RUNNER_NAME="REPLACE_ID"
+LABELS="REPLACE_LABELS"
 
 get_token() {
 	curl \
@@ -20,31 +19,20 @@ get_token() {
 }
 TOKEN=$(get_token)
 
-# create ubuntu user, no password
-adduser --disabled-password --gecos "" "$USER"
-usermod -aG sudo "$USER"
-passwd -d "$USER"
-
-# write a script that a non-root user can call
+# write a script that the ubuntu user can call
 cat <<EOF > "$SCRIPT"
 #!/bin/bash
 
-# get registration token
-
-sudo apt update
-sudo apt install -y jq
-
-# create work dir
-sudo mkdir -p "$WORK_DIR"
 cd "$WORK_DIR" || true
-sudo chown "$USER:$USER" "$WORK_DIR"
-
-# download runner
-curl -o "$TAR_NAME" -L "https://github.com/actions/runner/releases/download/v$RUNNER_VERSION/$TAR_NAME"
-tar xzf "$TAR_NAME"
 
 # register with github
-./config.sh --name "$RUNNER_NAME" --url "$REPO_URL" --token "$TOKEN" --unattended --ephemeral
+./config.sh \
+	--name "$RUNNER_NAME" \
+	--url "$REPO_URL" \
+	--token "$TOKEN" \
+	--labels "$LABELS" \
+	--unattended \
+	--ephemeral
 
 # start service
 sudo ./svc.sh install
