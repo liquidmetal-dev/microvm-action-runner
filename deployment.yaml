@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: microvm-action-runner-deployment
+  labels:
+    app: mvm-action-runner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mvm-action-runner
+  template:
+    metadata:
+      labels:
+        app: mvm-action-runner
+    spec:
+      containers:
+      - name: microvm-action-runner
+        image: ghcr.io/weaveworks-liquidmetal/microvm-action-runner:latest
+        args:
+          - "start"
+          - "--host"
+          - "HOST:9090"
+          - "--token"
+          - "PAT"
+          - "--user"
+          - "USER/ORG"
+          - "--repo"
+          - "REPO"
+          - "--secret"
+          - "foobar"
+        ports:
+        - containerPort: 3000
+

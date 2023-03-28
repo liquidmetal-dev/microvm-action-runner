@@ -32,7 +32,8 @@ cd "$WORK_DIR" || true
 	--token "$TOKEN" \
 	--labels "$LABELS" \
 	--unattended \
-	--ephemeral
+	--ephemeral \
+	--disableupdate
 
 # start service
 sudo ./svc.sh install
