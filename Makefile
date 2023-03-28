@@ -20,6 +20,10 @@ docker-build: ## Build the docker image
 docker-push: ## Push the docker image
 	docker push $(IMAGE_NAME)
 
+.PHONY: docker-multi
+docker-multi: ## Build and push multi-arch docker images
+	docker buildx build --platform linux/arm64,linux/amd64 -t $(IMAGE_NAME):latest --push .
+
 ##@ Development
 
 .PHONY: test

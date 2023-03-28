@@ -26,7 +26,7 @@ import (
 
 func TestNew_WithoutClientFuncShouldError(t *testing.T) {
 	g := NewWithT(t)
-	cfg := newTestConfig()
+	cfg := newTestConfig(nil)
 	p := handler.Params{
 		Config: cfg,
 	}
@@ -36,7 +36,7 @@ func TestNew_WithoutClientFuncShouldError(t *testing.T) {
 
 func TestNew_WithoutLoggerShouldError(t *testing.T) {
 	g := NewWithT(t)
-	cfg := newTestConfig()
+	cfg := newTestConfig(nil)
 	p := handler.Params{
 		Config: cfg,
 		Client: func(string) (client.FlintlockClient, error) { return &fakes.FakeFlintlockClient{}, nil },
@@ -47,7 +47,7 @@ func TestNew_WithoutLoggerShouldError(t *testing.T) {
 
 func TestNew_WithoutPayloadShouldError(t *testing.T) {
 	g := NewWithT(t)
-	cfg := newTestConfig()
+	cfg := newTestConfig(nil)
 	p := handler.Params{
 		Config: cfg,
 		Client: func(string) (client.FlintlockClient, error) { return &fakes.FakeFlintlockClient{}, nil },
@@ -59,7 +59,7 @@ func TestNew_WithoutPayloadShouldError(t *testing.T) {
 
 func TestNew_WithoutHostManagerShouldError(t *testing.T) {
 	g := NewWithT(t)
-	cfg := newTestConfig()
+	cfg := newTestConfig(nil)
 	p := handler.Params{
 		Config:  cfg,
 		Client:  func(string) (client.FlintlockClient, error) { return &fakes.FakeFlintlockClient{}, nil },
@@ -74,8 +74,6 @@ func TestHandleWebhookPost(t *testing.T) {
 	g := NewWithT(t)
 
 	var (
-		cfg = newTestConfig()
-
 		queued          = "queued"
 		completed       = "completed"
 		nodeId          = "foo"
@@ -85,6 +83,7 @@ func TestHandleWebhookPost(t *testing.T) {
 	tt := []struct {
 		name           string
 		event          string
+		labels         []string
 		clientFn       func(client.FlintlockClient) handler.ClientFunc
 		fakesReturn    func(*fakes.FakePayload, *fakes.FakeFlintlockClient)
 		expected       func(*fakes.FakePayload, *fakes.FakeFlintlockClient)
@@ -92,6 +91,7 @@ func TestHandleWebhookPost(t *testing.T) {
 	}{
 		{
 			name:     "payload service parse fails, processing any event fails",
+			labels:   []string{"foobar", "mvm"},
 			clientFn: newFakeClient,
 			fakesReturn: func(payloadService *fakes.FakePayload, flClient *fakes.FakeFlintlockClient) {
 				payloadService.ParseReturns(nil, errors.New("fail"))
@@ -104,6 +104,7 @@ func TestHandleWebhookPost(t *testing.T) {
 		},
 		{
 			name:     "payload service returns unknown payload, processing any event stops but does not fail",
+			labels:   []string{"foobar", "mvm"},
 			clientFn: newFakeClient,
 			fakesReturn: func(payloadService *fakes.FakePayload, flClient *fakes.FakeFlintlockClient) {
 				payloadService.ParseReturns(fakeEvent("random", nodeId, runId), nil)
@@ -118,6 +119,7 @@ func TestHandleWebhookPost(t *testing.T) {
 		},
 		{
 			name:     "payload service returns unknown event, processing any event stops but does not fail",
+			labels:   []string{"foobar", "mvm"},
 			clientFn: newFakeClient,
 			fakesReturn: func(payloadService *fakes.FakePayload, flClient *fakes.FakeFlintlockClient) {
 				payloadService.ParseReturns(nil, nil)
@@ -130,6 +132,7 @@ func TestHandleWebhookPost(t *testing.T) {
 		},
 		{
 			name:     "client func fails, processing queued event fails",
+			labels:   []string{"foobar", "mvm"},
 			event:    queued,
 			clientFn: newBadClient,
 			fakesReturn: func(payloadService *fakes.FakePayload, _ *fakes.FakeFlintlockClient) {
@@ -144,6 +147,7 @@ func TestHandleWebhookPost(t *testing.T) {
 		},
 		{
 			name:     "client func fails, processing completed event fails",
+			labels:   []string{"foobar", "mvm"},
 			event:    completed,
 			clientFn: newBadClient,
 			fakesReturn: func(payloadService *fakes.FakePayload, _ *fakes.FakeFlintlockClient) {
@@ -164,6 +168,7 @@ func TestHandleWebhookPost(t *testing.T) {
 				payloadService = &fakes.FakePayload{}
 				flClient       = fakes.FakeFlintlockClient{}
 				flClientFn     = tc.clientFn(&flClient)
+				cfg            = newTestConfig(tc.labels)
 			)
 
 			p := handler.Params{
@@ -191,8 +196,6 @@ func TestHandleWebhookPost_Queued(t *testing.T) {
 	g := NewWithT(t)
 
 	var (
-		cfg = newTestConfig()
-
 		queued       = "queued"
 		nodeId       = "foo"
 		runId  int64 = 1234
@@ -204,9 +207,11 @@ func TestHandleWebhookPost_Queued(t *testing.T) {
 		fakesReturn    func(*fakes.FakePayload, *fakes.FakeFlintlockClient)
 		expected       func(*fakes.FakePayload, *fakes.FakeFlintlockClient)
 		expectedStatus int
+		labels         []string
 	}{
 		{
-			name: "payload service parse fails, processing any event fails",
+			name:   "payload service parse fails, processing any event fails",
+			labels: []string{"foobar", "mvm"},
 			fakesReturn: func(payloadService *fakes.FakePayload, flClient *fakes.FakeFlintlockClient) {
 				payloadService.ParseReturns(nil, errors.New("fail"))
 			},
@@ -217,7 +222,8 @@ func TestHandleWebhookPost_Queued(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 		},
 		{
-			name: "payload service returns unknown payload, processing any event stops but does not fail",
+			name:   "payload service returns unknown payload, processing any event stops but does not fail",
+			labels: []string{"foobar", "mvm"},
 			fakesReturn: func(payloadService *fakes.FakePayload, flClient *fakes.FakeFlintlockClient) {
 				payloadService.ParseReturns(nil, nil)
 			},
@@ -228,7 +234,8 @@ func TestHandleWebhookPost_Queued(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name: "processing queued event succeeds",
+			name:   "processing queued event succeeds",
+			labels: []string{"foobar", "mvm"},
 			fakesReturn: func(payloadService *fakes.FakePayload, flClient *fakes.FakeFlintlockClient) {
 				payloadService.ParseReturns(fakeEvent(queued, nodeId, runId), nil)
 				flClient.CreateReturns(fakeMicrovm(mvmUid), nil)
@@ -242,7 +249,20 @@ func TestHandleWebhookPost_Queued(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name: "flintlock client create call fails, processing queued event fails",
+			name:   "payload service parse suceeds, no matching labels, processing stops but does not fail",
+			labels: []string{"foobar"},
+			fakesReturn: func(payloadService *fakes.FakePayload, flClient *fakes.FakeFlintlockClient) {
+				payloadService.ParseReturns(fakeEvent(queued, nodeId, runId), nil)
+			},
+			expected: func(payloadService *fakes.FakePayload, flClient *fakes.FakeFlintlockClient) {
+				g.Expect(payloadService.ParseCallCount()).To(Equal(1))
+				g.Expect(flClient.CreateCallCount()).To(Equal(0))
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:   "flintlock client create call fails, processing queued event fails",
+			labels: []string{"foobar", "mvm"},
 			fakesReturn: func(payloadService *fakes.FakePayload, flClient *fakes.FakeFlintlockClient) {
 				payloadService.ParseReturns(fakeEvent(queued, nodeId, runId), nil)
 				flClient.CreateReturns(nil, errors.New("fail"))
@@ -261,6 +281,7 @@ func TestHandleWebhookPost_Queued(t *testing.T) {
 				payloadService = &fakes.FakePayload{}
 				flClient       = fakes.FakeFlintlockClient{}
 				flClientFn     = newFakeClient(&flClient)
+				cfg            = newTestConfig(tc.labels)
 			)
 
 			p := handler.Params{
@@ -288,8 +309,6 @@ func TestHandleWebhookPost_Completed(t *testing.T) {
 	g := NewWithT(t)
 
 	var (
-		cfg = newTestConfig()
-
 		completed       = "completed"
 		nodeId          = "foo"
 		runId     int64 = 1234
@@ -298,12 +317,14 @@ func TestHandleWebhookPost_Completed(t *testing.T) {
 
 	tt := []struct {
 		name           string
+		labels         []string
 		fakesReturn    func(*fakes.FakePayload, *fakes.FakeFlintlockClient)
 		expected       func(*fakes.FakePayload, *fakes.FakeFlintlockClient)
 		expectedStatus int
 	}{
 		{
-			name: "processing completed event succeeds",
+			name:   "processing completed event succeeds",
+			labels: []string{"foobar", "mvm"},
 			fakesReturn: func(payloadService *fakes.FakePayload, flClient *fakes.FakeFlintlockClient) {
 				payloadService.ParseReturns(fakeEvent(completed, nodeId, runId), nil)
 				flClient.ListReturns(fakeMicrovmList(mvmUid), nil)
@@ -323,7 +344,8 @@ func TestHandleWebhookPost_Completed(t *testing.T) {
 			expectedStatus: http.StatusOK,
 		},
 		{
-			name: "flintlock client list call fails, processing completed event fails",
+			name:   "flintlock client list call fails, processing completed event fails",
+			labels: []string{"foobar", "mvm"},
 			fakesReturn: func(payloadService *fakes.FakePayload, flClient *fakes.FakeFlintlockClient) {
 				payloadService.ParseReturns(fakeEvent(completed, nodeId, runId), nil)
 				flClient.ListReturns(nil, errors.New("fail"))
@@ -336,7 +358,8 @@ func TestHandleWebhookPost_Completed(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 		},
 		{
-			name: "flintlock client delete call fails, processing completed event fails",
+			name:   "flintlock client delete call fails, processing completed event fails",
+			labels: []string{"foobar", "mvm"},
 			fakesReturn: func(payloadService *fakes.FakePayload, flClient *fakes.FakeFlintlockClient) {
 				payloadService.ParseReturns(fakeEvent(completed, nodeId, runId), nil)
 				flClient.ListReturns(fakeMicrovmList(mvmUid), nil)
@@ -351,7 +374,8 @@ func TestHandleWebhookPost_Completed(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 		},
 		{
-			name: "flintlock client list call returns no entries, processing completed event stops but does not fail",
+			name:   "flintlock client list call returns no entries, processing completed event stops but does not fail",
+			labels: []string{"foobar", "mvm"},
 			fakesReturn: func(payloadService *fakes.FakePayload, flClient *fakes.FakeFlintlockClient) {
 				payloadService.ParseReturns(fakeEvent(completed, nodeId, runId), nil)
 				flClient.ListReturns(fakeMicrovmList(""), nil)
@@ -372,6 +396,7 @@ func TestHandleWebhookPost_Completed(t *testing.T) {
 				payloadService = &fakes.FakePayload{}
 				flClient       = fakes.FakeFlintlockClient{}
 				flClientFn     = newFakeClient(&flClient)
+				cfg            = newTestConfig(tc.labels)
 			)
 
 			manager := host.New(cfg.Hosts)
@@ -405,6 +430,7 @@ func fakeEvent(action, nodeID string, id int64) *github.WorkflowJobPayload {
 	job.WorkflowJob.ID = id
 	job.WorkflowJob.RunID = id
 	job.WorkflowJob.NodeID = nodeID
+	job.WorkflowJob.Labels = []string{"mvm"}
 
 	return &job
 }
@@ -437,12 +463,13 @@ func fakeMicrovmList(uid string) *v1alpha1.ListMicroVMsResponse {
 	return list
 }
 
-func newTestConfig() *config.Config {
+func newTestConfig(labels []string) *config.Config {
 	return &config.Config{
 		Hosts:         []string{"host"},
 		APIToken:      "token",
 		SSHPublicKey:  "key",
 		WebhookSecret: "secret",
+		Labels:        labels,
 	}
 }
 

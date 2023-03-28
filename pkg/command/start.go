@@ -27,6 +27,7 @@ func startCommand() *cli.Command {
 			flags.WithAPITokenFlag(),
 			flags.WithWebhookSecretFlag(),
 			flags.WithSSHPublicKeyFlag(),
+			flags.WithRunnerLabelsFlag(),
 		),
 		Action: func(c *cli.Context) error {
 			return StartFn(cfg)

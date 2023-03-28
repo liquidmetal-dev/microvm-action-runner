@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/warehouse-13/hammertime/pkg/defaults"
 	"github.com/weaveworks-liquidmetal/flintlock/api/types"
 	"github.com/weaveworks-liquidmetal/flintlock/client/cloudinit/instance"
 	"github.com/weaveworks-liquidmetal/flintlock/client/cloudinit/userdata"
@@ -18,17 +17,26 @@ const (
 	userdataScript = "userdata.sh"
 )
 
-func New(ghToken, publicKey, user, repo, id string) (*types.MicroVMSpec, error) {
-	mvm := defaults.BaseMicroVM()
-	mvm.Id = id
+type UserdataCfg struct {
+	GithubToken string
+	PublicKey   string
+	User        string
+	Repo        string
+	Id          string
+	Labels      []string
+}
+
+func New(cfg UserdataCfg) (*types.MicroVMSpec, error) {
+	mvm := defaultMicroVM()
+	mvm.Id = cfg.Id
 	mvm.Namespace = Namespace
 
-	metadata, err := createMetadata(id, Namespace)
+	metadata, err := createMetadata(cfg.Id, Namespace)
 	if err != nil {
 		return nil, err
 	}
 
-	userdata, err := createUserData(id, user, repo, ghToken, publicKey)
+	userdata, err := createUserData(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +67,7 @@ func createMetadata(name, ns string) (string, error) {
 //go:embed userdata.sh
 var embeddedScript embed.FS
 
-func createUserData(id, ghToken, user, repo, publicKey string) (string, error) {
+func createUserData(cfg UserdataCfg) (string, error) {
 	dat, err := embeddedScript.ReadFile(userdataScript)
 	if err != nil {
 		return "", err
@@ -67,13 +75,14 @@ func createUserData(id, ghToken, user, repo, publicKey string) (string, error) {
 
 	script := string(dat)
 
-	script = strings.Replace(script, "REPLACE_PAT", ghToken, 1)
-	script = strings.Replace(script, "REPLACE_ID", id, 1)
-	script = strings.Replace(script, "REPLACE_ORG_USER", user, 1)
-	script = strings.Replace(script, "REPLACE_REPO", repo, 1)
+	script = strings.Replace(script, "REPLACE_PAT", cfg.GithubToken, 1)
+	script = strings.Replace(script, "REPLACE_ID", cfg.Id, 1)
+	script = strings.Replace(script, "REPLACE_ORG_USER", cfg.User, 1)
+	script = strings.Replace(script, "REPLACE_REPO", cfg.Repo, 1)
+	script = strings.Replace(script, "REPLACE_LABELS", formatLabels(cfg.Labels), 1)
 
 	userData := &userdata.UserData{
-		HostName: id,
+		HostName: cfg.Id,
 		Users: []userdata.User{{
 			Name: "root",
 		}},
@@ -86,8 +95,8 @@ func createUserData(id, ghToken, user, repo, publicKey string) (string, error) {
 		},
 	}
 
-	if publicKey != "" {
-		userData.Users[0].SSHAuthorizedKeys = []string{publicKey}
+	if cfg.PublicKey != "" {
+		userData.Users[0].SSHAuthorizedKeys = []string{cfg.PublicKey}
 	}
 
 	data, err := yaml.Marshal(userData)
@@ -98,4 +107,8 @@ func createUserData(id, ghToken, user, repo, publicKey string) (string, error) {
 	dataWithHeader := append([]byte("#cloud-config\n"), data...)
 
 	return base64.StdEncoding.EncodeToString(dataWithHeader), nil
+}
+
+func formatLabels(labels []string) string {
+	return strings.Join(labels[:], ",")
 }

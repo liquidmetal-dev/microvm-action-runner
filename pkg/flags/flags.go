@@ -1,6 +1,9 @@
 package flags
 
 import (
+	"encoding/base64"
+	"fmt"
+
 	"github.com/urfave/cli/v2"
 	"github.com/weaveworks-liquidmetal/microvm-action-runner/pkg/config"
 )
@@ -28,6 +31,7 @@ const (
 	tokenFlag  = "token"
 	secretFlag = "secret"
 	keyFlag    = "key"
+	labelsFlag = "labels"
 )
 
 // WithRepoFlags adds the github user and repo flags to the command.
@@ -106,6 +110,20 @@ func WithSSHPublicKeyFlag() WithFlagsFunc {
 	}
 }
 
+// WithRunnerLabelsFlag adds the runenr labels flags to the command.
+func WithRunnerLabelsFlag() WithFlagsFunc {
+	return func() []cli.Flag {
+		return []cli.Flag{
+			&cli.StringSliceFlag{
+				Name:     labelsFlag,
+				Aliases:  []string{"label"},
+				Usage:    "labels which when matched by the action will trigger the service",
+				Required: false,
+			},
+		}
+	}
+}
+
 // ParseFlags processes all flags on the CLI context and builds a config object
 // which will be used in the command's action.
 func ParseFlags(cfg *config.Config) cli.BeforeFunc {
@@ -113,9 +131,17 @@ func ParseFlags(cfg *config.Config) cli.BeforeFunc {
 		cfg.Repository = ctx.String(repoFlag)
 		cfg.Username = ctx.String(userFlag)
 		cfg.Hosts = ctx.StringSlice(hostsFlag)
-		cfg.APIToken = ctx.String(tokenFlag)
 		cfg.WebhookSecret = ctx.String(secretFlag)
 		cfg.SSHPublicKey = ctx.String(keyFlag)
+		cfg.Labels = ctx.StringSlice(labelsFlag)
+		cfg.Labels = append(cfg.Labels, config.DefaultLabel)
+
+		token, err := base64.StdEncoding.DecodeString(ctx.String(tokenFlag))
+		if err != nil {
+			return fmt.Errorf("could not decode token value: %w", err)
+		}
+
+		cfg.APIToken = string(token)
 
 		return nil
 	}

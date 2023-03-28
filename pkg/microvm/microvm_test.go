@@ -2,6 +2,7 @@ package microvm_test
 
 import (
 	"encoding/base64"
+	"strings"
 	"testing"
 
 	. "github.com/onsi/gomega"
@@ -19,9 +20,19 @@ func Test_MicrovmNew(t *testing.T) {
 		repoName = "action-runner"
 		userName = "liquid-metal"
 		token    = "token"
+		labels   = []string{"foo", "bar"}
 	)
 
-	spec, err := microvm.New(token, "", userName, repoName, id)
+	cfg := microvm.UserdataCfg{
+		GithubToken: token,
+		PublicKey:   "",
+		User:        userName,
+		Repo:        repoName,
+		Id:          id,
+		Labels:      labels,
+	}
+
+	spec, err := microvm.New(cfg)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	g.Expect(spec.Namespace).To(Equal(microvm.Namespace))
@@ -34,6 +45,7 @@ func Test_MicrovmNew(t *testing.T) {
 	g.Expect(userData.RunCommands[0]).To(ContainSubstring(token))
 	g.Expect(userData.RunCommands[0]).To(ContainSubstring(userName))
 	g.Expect(userData.RunCommands[0]).To(ContainSubstring(repoName))
+	g.Expect(userData.RunCommands[0]).To(ContainSubstring(strings.Join(labels[:], ",")))
 }
 
 func Test_MicrovmNew_WithSSHKey(t *testing.T) {
@@ -45,7 +57,15 @@ func Test_MicrovmNew_WithSSHKey(t *testing.T) {
 		key   = "key"
 	)
 
-	spec, err := microvm.New(token, key, "", "", name)
+	cfg := microvm.UserdataCfg{
+		GithubToken: token,
+		PublicKey:   key,
+		User:        "",
+		Repo:        "",
+		Id:          name,
+	}
+
+	spec, err := microvm.New(cfg)
 	g.Expect(err).NotTo(HaveOccurred())
 
 	g.Expect(spec.Namespace).To(Equal(microvm.Namespace))
