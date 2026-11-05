@@ -8,7 +8,7 @@ This is a POC service for creating on-the-fly self-hosted action runners on
 Clone and build the binary:
 
 ```bash
-git clone https://github.io/weaveworks-liquidmetal/microvm-action-runner
+git clone https://github.com/liquidmetal-dev/microvm-action-runner
 cd microvm-action-runner
 make build
 ```

@@ -1,6 +1,6 @@
 .PHONY: help
 
-REGISTRY?=ghcr.io/weaveworks-liquidmetal
+REGISTRY?=ghcr.io/liquidmetal-dev
 IMAGE_NAME?=$(REGISTRY)/microvm-action-runner
 
 help: ## Display this help.
